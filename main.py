@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from unidecode import unidecode
 from rapidfuzz import fuzz
 from apscheduler.schedulers.background import BackgroundScheduler
-from xml_fetcher import fetch_and_convert_json  # atualizado
+from xml_fetcher import fetch_and_convert_json as fetch_and_convert_xml  # ajuste aqui
 import json, os
 
 app = FastAPI()
@@ -132,7 +132,7 @@ def filtrar_veiculos(vehicles, filtros, valormax=None):
             return []
 
     vehicles_filtrados.sort(
-        key=lambda v: converter_preco(v["preco"]) if "preco" in v else float('inf'),
+        key=lambda v: converter_preco(v.get("preco")) if converter_preco(v.get("preco")) is not None else float("inf"),
         reverse=True
     )
     return vehicles_filtrados
@@ -140,9 +140,9 @@ def filtrar_veiculos(vehicles, filtros, valormax=None):
 @app.on_event("startup")
 def agendar_tarefas():
     scheduler = BackgroundScheduler()
-    scheduler.add_job(fetch_and_convert_json, "cron", hour="0,12")  # atualizado
+    scheduler.add_job(fetch_and_convert_xml, "cron", hour="0,12")
     scheduler.start()
-    fetch_and_convert_json()  # atualizado
+    fetch_and_convert_xml()
 
 @app.get("/api/data")
 def get_data(request: Request):
