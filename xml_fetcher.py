@@ -1,61 +1,58 @@
-def fetch_and_convert_xml():
-    try:
-        if not XML_URL:
-            raise ValueError("Variável XML_URL não definida")
+import requests, json, os
+from datetime import datetime
+from unidecode import unidecode
 
-        response = requests.get(XML_URL)
-        data_list = xmltodict.parse(response.content)
+XML_URL = os.getenv("XML_URL")  # ou defina diretamente: XML_URL = "https://..."
+JSON_FILE = "data.json"
 
-        # Quando o XML já é uma lista direta, como no seu caso, convertemos manualmente
-        # pois xmltodict coloca isso dentro de alguma chave se for XML tradicional
-        # Mas você mencionou que o XML já está vindo praticamente em formato JSON (lista pura)
-
-        # Se `data_list` vier como um dicionário com uma chave externa, extraia-a
-        # Ex: {"veiculos": [ ... ] }
-        # Caso esteja já em lista diretamente (como você mostrou), use diretamente
-        if isinstance(data_list, dict):
-            # Tentativa de detectar a lista de veículos (ex: {"veiculos": [ ... ]})
-            for value in data_list.values():
-                if isinstance(value, list):
-                    data_list = value
-                    break
-            else:
-                raise ValueError("Não foi possível localizar a lista de veículos no XML.")
-
-        parsed_vehicles = []
-
-        for v in data_list:
-            try:
-                parsed = {
-                    "id": v.get("codigo_lk"),
-                    "marca": v.get("marca"),
-                    "modelo": v.get("modelo"),
-                    "categoria": inferir_categoria(v.get("modelo")),
-                    "ano": v.get("ano_modelo"),
-                    "km": v.get("km"),
-                    "cor": v.get("cor"),
-                    "combustivel": v.get("combustivel"),
-                    "cambio": v.get("cambio"),
-                    "portas": v.get("numeroportas"),
-                    "preco": converter_preco_xml(v.get("valor")),
-                    "opcionais": v.get("opcionais"),
-                    "fotos": v.get("fotos", [])
-                }
-                parsed_vehicles.append(parsed)
-            except Exception as e:
-                print(f"[ERRO ao converter veículo ID {v.get('codigo_lk')}] {e}")
-
-        data_dict = {
-            "veiculos": parsed_vehicles,
-            "_updated_at": datetime.now().isoformat()
-        }
-
-        with open(JSON_FILE, "w", encoding="utf-8") as f:
-            json.dump(data_dict, f, ensure_ascii=False, indent=2)
-
-        print("[OK] Dados atualizados com sucesso.")
-        return data_dict
-
-    except Exception as e:
-        print(f"[ERRO] Falha ao converter XML: {e}")
-        return {}
+# MAPEAMENTO_CATEGORIAS (mantido como no seu código original)
+MAPEAMENTO_CATEGORIAS = {
+    "gol": "Hatch", "uno": "Hatch", "palio": "Hatch", "celta": "Hatch", "ka": "Hatch",
+    "fiesta": "Hatch", "march": "Hatch", "sandero": "Hatch", "onix": "Hatch", "hb20": "Hatch",
+    "i30": "Hatch", "golf": "Hatch", "polo": "Hatch", "fox": "Hatch", "up": "Hatch",
+    "fit": "Hatch", "city": "Hatch", "yaris": "Hatch", "etios": "Hatch", "clio": "Hatch",
+    "corsa": "Hatch", "bravo": "Hatch", "punto": "Hatch", "208": "Hatch", "argo": "Hatch",
+    "mobi": "Hatch", "c3": "Hatch", "picanto": "Hatch", "astra hatch": "Hatch", "stilo": "Hatch",
+    "focus hatch": "Hatch", "206": "Hatch", "c4 vtr": "Hatch", "kwid": "Hatch", "soul": "Hatch",
+    "agile": "Hatch", "sonic hatch": "Hatch", "fusca": "Hatch",
+    "civic": "Sedan", "corolla": "Sedan", "sentra": "Sedan", "versa": "Sedan", "jetta": "Sedan",
+    "prisma": "Sedan", "voyage": "Sedan", "siena": "Sedan", "grand siena": "Sedan", "cruze": "Sedan",
+    "cobalt": "Sedan", "logan": "Sedan", "fluence": "Sedan", "cerato": "Sedan", "elantra": "Sedan",
+    "virtus": "Sedan", "accord": "Sedan", "altima": "Sedan", "fusion": "Sedan", "mazda3": "Sedan",
+    "mazda6": "Sedan", "passat": "Sedan", "city sedan": "Sedan", "astra sedan": "Sedan", "vectra sedan": "Sedan",
+    "classic": "Sedan", "cronos": "Sedan", "linea": "Sedan", "focus sedan": "Sedan", "ka sedan": "Sedan",
+    "408": "Sedan", "c4 pallas": "Sedan", "polo sedan": "Sedan", "bora": "Sedan", "hb20s": "Sedan",
+    "lancer": "Sedan", "camry": "Sedan", "onix plus": "Sedan",
+    "duster": "SUV", "ecosport": "SUV", "hrv": "SUV", "compass": "SUV", "renegade": "SUV",
+    "tracker": "SUV", "kicks": "SUV", "captur": "SUV", "creta": "SUV", "tucson": "SUV",
+    "santa fe": "SUV", "sorento": "SUV", "sportage": "SUV", "outlander": "SUV", "asx": "SUV",
+    "pajero": "SUV", "tr4": "SUV", "aircross": "SUV", "tiguan": "SUV", "t-cross": "SUV",
+    "rav4": "SUV", "cx5": "SUV", "forester": "SUV", "wrx": "SUV", "land cruiser": "SUV",
+    "cherokee": "SUV", "grand cherokee": "SUV", "xtrail": "SUV", "murano": "SUV", "cx9": "SUV",
+    "edge": "SUV", "trailblazer": "SUV", "pulse": "SUV", "fastback": "SUV", "territory": "SUV",
+    "bronco sport": "SUV", "2008": "SUV", "3008": "SUV", "c4 cactus": "SUV", "taos": "SUV",
+    "cr-v": "SUV", "corolla cross": "SUV", "sw4": "SUV", "pajero sport": "SUV", "commander": "SUV",
+    "xv": "SUV", "xc60": "SUV", "tiggo 5x": "SUV", "haval h6": "SUV", "nivus": "SUV",
+    "hilux": "Caminhonete", "ranger": "Caminhonete", "s10": "Caminhonete", "l200": "Caminhonete", "triton": "Caminhonete",
+    "saveiro": "Utilitário", "strada": "Utilitário", "montana": "Utilitário", "oroch": "Utilitário",
+    "toro": "Caminhonete", "frontier": "Caminhonete", "amarok": "Caminhonete", "gladiator": "Caminhonete",
+    "maverick": "Caminhonete", "colorado": "Caminhonete", "dakota": "Caminhonete",
+    "montana (nova)": "Caminhonete", "f-250": "Caminhonete", "courier (pickup)": "Caminhonete", "hoggar": "Caminhonete",
+    "ram 1500": "Caminhonete",
+    "kangoo": "Utilitário", "partner": "Utilitário", "doblo": "Utilitário", "fiorino": "Utilitário", "berlingo": "Utilitário",
+    "express": "Utilitário", "combo": "Utilitário", "kombi": "Utilitário", "doblo cargo": "Utilitário", "kangoo express": "Utilitário",
+    "master": "Furgão", "sprinter": "Furgão", "ducato": "Furgão", "daily": "Furgão", "jumper": "Furgão",
+    "boxer": "Furgão", "trafic": "Furgão", "transit": "Furgão", "vito": "Furgão", "expert (furgão)": "Furgão",
+    "jumpy (furgão)": "Furgão", "scudo (furgão)": "Furgão",
+    "camaro": "Coupe", "mustang": "Coupe", "tt": "Coupe", "supra": "Coupe", "370z": "Coupe",
+    "rx8": "Coupe", "challenger": "Coupe", "corvette": "Coupe", "veloster": "Coupe", "cerato koup": "Coupe",
+    "clk coupe": "Coupe", "a5 coupe": "Coupe", "gt86": "Coupe", "rcz": "Coupe", "brz": "Coupe",
+    "z4": "Conversível", "boxster": "Conversível", "miata": "Conversível", "beetle cabriolet": "Conversível", "slk": "Conversível",
+    "911 cabrio": "Conversível", "tt roadster": "Conversível", "a5 cabrio": "Conversível", "mini cabrio": "Conversível", "206 cc": "Conversível",
+    "eos": "Conversível",
+    "spin": "Minivan", "livina": "Minivan", "caravan": "Minivan", "touran": "Minivan", "parati": "Station Wagon",
+    "quantum": "Station Wagon", "sharan": "Minivan", "zafira": "Minivan", "picasso": "Minivan", "grand c4": "Minivan",
+    "meriva": "Minivan", "scenic": "Minivan", "xsara picasso": "Minivan", "carnival": "Minivan", "idea": "Minivan",
+    "spacefox": "Station Wagon", "golf variant": "Station Wagon", "palio weekend": "Station Wagon",
+    "astra sw": "Station Wagon", "206 sw": "Station Wagon", "a4 avant": "Station Wagon", "fielder": "Station Wagon",
+    "wrangler": "
