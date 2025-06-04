@@ -55,4 +55,73 @@ MAPEAMENTO_CATEGORIAS = {
     "meriva": "Minivan", "scenic": "Minivan", "xsara picasso": "Minivan", "carnival": "Minivan", "idea": "Minivan",
     "spacefox": "Station Wagon", "golf variant": "Station Wagon", "palio weekend": "Station Wagon",
     "astra sw": "Station Wagon", "206 sw": "Station Wagon", "a4 avant": "Station Wagon", "fielder": "Station Wagon",
-    "wrangler": "
+    "wrangler": "Off-road", "troller": "Off-road", "defender": "Off-road", "bronco": "Off-road", "samurai": "Off-road",
+    "jimny": "Off-road", "land cruiser": "Off-road", "grand vitara": "Off-road", "jimny sierra": "Off-road", "bandeirante (ate 2001)": "Off-road"
+}
+
+def inferir_categoria(modelo):
+    if not modelo:
+        return None
+    modelo_norm = unidecode(modelo).lower().replace("-", "").replace(" ", "").strip()
+    for mapeado, categoria in MAPEAMENTO_CATEGORIAS.items():
+        if mapeado in modelo_norm:
+            return categoria
+    return None
+
+def converter_preco_xml(valor_str):
+    if not valor_str:
+        return None
+    try:
+        valor = str(valor_str).replace("R$", "").replace(".", "").replace(",", ".").strip()
+        return float(valor)
+    except ValueError:
+        return None
+
+def fetch_and_convert_json():
+    try:
+        if not XML_URL:
+            raise ValueError("Variável XML_URL não definida")
+
+        response = requests.get(XML_URL)
+        data_list = response.json()
+
+        if not isinstance(data_list, list):
+            raise ValueError("Formato inesperado: esperado uma lista de veículos")
+
+        parsed_vehicles = []
+
+        for v in data_list:
+            try:
+                parsed = {
+                    "id": v.get("codigo_lk"),
+                    "marca": v.get("marca"),
+                    "modelo": v.get("modelo"),
+                    "categoria": inferir_categoria(v.get("modelo")),
+                    "ano": v.get("ano_modelo"),
+                    "km": v.get("km"),
+                    "cor": v.get("cor"),
+                    "combustivel": v.get("combustivel"),
+                    "cambio": v.get("cambio"),
+                    "portas": v.get("numeroportas"),
+                    "preco": converter_preco_xml(v.get("valor")),
+                    "opcionais": v.get("opcionais"),
+                    "fotos": v.get("fotos", [])
+                }
+                parsed_vehicles.append(parsed)
+            except Exception as e:
+                print(f"[ERRO ao converter veículo ID {v.get('codigo_lk')}] {e}")
+
+        data_dict = {
+            "veiculos": parsed_vehicles,
+            "_updated_at": datetime.now().isoformat()
+        }
+
+        with open(JSON_FILE, "w", encoding="utf-8") as f:
+            json.dump(data_dict, f, ensure_ascii=False, indent=2)
+
+        print("[OK] Dados atualizados com sucesso.")
+        return data_dict
+
+    except Exception as e:
+        print(f"[ERRO] Falha ao converter JSON: {e}")
+        return {}
