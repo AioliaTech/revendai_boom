@@ -105,7 +105,7 @@ def fetch_and_convert_json():
                     "combustivel": v.get("combustivel"),
                     "cambio": v.get("cambio"),
                     "portas": v.get("portas"),
-                    "preco": converter_preco_xml(v.get("valorVenda")),
+                    "preco": float(v.get("valorVenda", 0)),
                     "opcionais": v.get("opcionais"),
                     "fotos": v.get("fotos", [])
                 }
