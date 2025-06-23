@@ -97,15 +97,15 @@ def fetch_and_convert_json():
                 parsed = {
                     "id": v.get("id"),
                     "marca": v.get("marca"),
-                    "modelo": v.get("modelo"),
+                    "modelo": v.get("AnoModelo"),
                     "categoria": inferir_categoria(v.get("modelo")),
                     "ano": v.get("AnoModelo"),
                     "km": v.get("km"),
                     "cor": v.get("cor"),
                     "combustivel": v.get("combustivel"),
                     "cambio": v.get("cambio"),
-                    "portas": v.get("numeroportas"),
-                    "preco": converter_preco_xml(v.get("valor")),
+                    "portas": v.get("portas"),
+                    "preco": converter_preco_xml(v.get("valorVenda")),
                     "opcionais": v.get("opcionais"),
                     "fotos": v.get("fotos", [])
                 }
