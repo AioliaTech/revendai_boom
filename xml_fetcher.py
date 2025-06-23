@@ -97,7 +97,7 @@ def fetch_and_convert_json():
                     "marca": v.get("marca"),
                     "modelo": v.get("modelo"),
                     "categoria": inferir_categoria(v.get("modelo")),
-                    "ano": v.get("ano_modelo"),
+                    "ano": v.get("AnoModelo"),
                     "km": v.get("km"),
                     "cor": v.get("cor"),
                     "combustivel": v.get("combustivel"),
