@@ -82,15 +82,15 @@ def fetch_and_convert_json():
         if not XML_URL:
             raise ValueError("Variável XML_URL não definida")
 
-        response = requests.get(XML_URL)
-        data_list = response.json()
+data_dict_raw = response.json()
+veiculos = data_dict_raw.get("veiculos", [])
 
-        if not isinstance(data_list, list):
-            raise ValueError("Formato inesperado: esperado uma lista de veículos")
+if not isinstance(veiculos, list):
+    raise ValueError("Formato inesperado: campo 'veiculos' não é uma lista")
 
-        parsed_vehicles = []
+parsed_vehicles = []
 
-        for v in veiculos:
+for v in veiculos:
             try:
                 parsed = {
                     "id": v.get("id"),
