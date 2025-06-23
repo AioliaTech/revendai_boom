@@ -90,7 +90,7 @@ def fetch_and_convert_json():
 
         parsed_vehicles = []
 
-        for v in data_list:
+        for v in veiculos:
             try:
                 parsed = {
                     "id": v.get("id"),
