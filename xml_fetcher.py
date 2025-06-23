@@ -83,7 +83,7 @@ def fetch_and_convert_json():
             raise ValueError("Variável XML_URL não definida")
 
         response = requests.get(XML_URL)
-        data_list = response.json()
+        data_list = response_json.get("veiculos", [])
 
         if not isinstance(data_list, list):
             raise ValueError("Formato inesperado: esperado uma lista de veículos")
