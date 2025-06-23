@@ -97,9 +97,9 @@ def fetch_and_convert_json():
                 parsed = {
                     "id": v.get("id"),
                     "marca": v.get("marca"),
-                    "modelo": v.get("AnoModelo"),
+                    "modelo": v.get("modelo"),
                     "categoria": inferir_categoria(v.get("modelo")),
-                    "ano": v.get("AnoModelo"),
+                    "ano": v.get("anoModelo"),
                     "km": v.get("km"),
                     "cor": v.get("cor"),
                     "combustivel": v.get("combustivel"),
