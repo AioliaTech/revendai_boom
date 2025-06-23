@@ -93,7 +93,7 @@ def fetch_and_convert_json():
         for v in data_list:
             try:
                 parsed = {
-                    "id": v.get("codigo_lk"),
+                    "id": v.get("id"),
                     "marca": v.get("marca"),
                     "modelo": v.get("modelo"),
                     "categoria": inferir_categoria(v.get("modelo")),
