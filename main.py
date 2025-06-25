@@ -123,7 +123,7 @@ def filtrar_veiculos(vehicles, filtros, valormax=None):
     if valormax:
         try:
             teto = float(valormax)
-            maximo = teto * 1.3
+            maximo = teto * 1.2
             vehicles_filtrados = [
                 v for v in vehicles_filtrados
                 if "preco" in v and converter_preco(v["preco"]) is not None and converter_preco(v["preco"]) <= maximo
