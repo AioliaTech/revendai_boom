@@ -199,7 +199,7 @@ def get_data(request: Request):
 
     if alternativas:
         alternativa = [
-            {"titulo": v.get("titulo", ""), "preco": v.get("preco", "")}
+            {"modelo": v.get("modelo", ""), "ano": v.get("ano", ""), "preco": v.get("preco", "")}
             for v in alternativas
         ]
         return JSONResponse(content={
