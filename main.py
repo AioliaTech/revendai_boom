@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from unidecode import unidecode
 from rapidfuzz import fuzz
 from apscheduler.schedulers.background import BackgroundScheduler
-from xml_fetcher import fetch_and_convert_xml # Presumo que este arquivo exista
+from xml_fetcher import fetch_and_convert_json as fetch_and_convert_xml  # ajuste aqui
 import json, os
 
 app = FastAPI()
