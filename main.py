@@ -100,7 +100,7 @@ def get_price_for_sort(price_val):
     return converted if converted is not None else float('-inf')
 
 def filtrar_veiculos(vehicles, filtros, valormax=None):
-    campos_fuzzy = ["modelo", "titulo", "cor", "opcionais"]
+    campos_fuzzy = ["modelo", "cor", "opcionais"]
     vehicles_processados = list(vehicles) 
 
     # Inicializa campos temporários para relevância em cada veículo
