@@ -7,7 +7,7 @@ JSON_FILE = "data.json"
 
 # MAPEAMENTO_CATEGORIAS (mantido como no seu código original)
 MAPEAMENTO_CATEGORIAS = {
-    "D20": "Caminhonete", "tcross": "SUV", "c4": "Hatch", "T-": "SUV", "gol": "Hatch", "uno": "Hatch", "palio": "Hatch", "celta": "Hatch", "ka": "Hatch",
+    "d20": "Caminhonete", "tcross": "SUV", "c4": "Hatch", "T-": "SUV", "gol": "Hatch", "uno": "Hatch", "palio": "Hatch", "celta": "Hatch", "ka": "Hatch",
     "fiesta": "Hatch", "march": "Hatch", "sandero": "Hatch", "onix": "Hatch", "hb20": "Hatch",
     "i30": "Hatch", "golf": "Hatch", "polo": "Hatch", "fox": "Hatch", "up": "Hatch",
     "fit": "Hatch", "city": "Hatch", "yaris": "Hatch", "etios": "Hatch", "clio": "Hatch",
