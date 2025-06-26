@@ -100,7 +100,7 @@ def get_price_for_sort(price_val):
     return converted if converted is not None else float('-inf')
 
 def filtrar_veiculos(vehicles, filtros, valormax=None):
-    campos_fuzzy = ["modelo", "cor", "opcionais"]
+    campos_fuzzy = ["modelo", "titulo", "cor", "opcionais"]
     vehicles_processados = list(vehicles) 
 
     # Inicializa campos temporários para relevância em cada veículo
@@ -262,6 +262,7 @@ def get_data(request: Request):
     "tipo": query_params.get("tipo"),
     "modelo": query_params.get("modelo"),
     "marca": query_params.get("marca"),
+    "cilindrada": query_params.get("cilindrada"),
     "categoria": query_params.get("categoria"),
     "motor": query_params.get("motor"),
     "opcionais": query_params.get("opcionais"),
@@ -313,7 +314,7 @@ def get_data(request: Request):
     
     if alternativas:
         alternativas_formatadas = [
-            {"modelo": v.get("modelo", ""), "ano": v.get("ano", ""),"preco": v.get("preco", "")}
+            {"titulo": v.get("titulo", ""), "preco": v.get("preco", "")}
             for v in alternativas[:10] 
         ]
         return JSONResponse(content={
