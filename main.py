@@ -331,7 +331,7 @@ def get_data(request: Request):
         sugestao_acima = sugerir_mais_proximo_acima(vehicles, valormax, limite=5)
         if sugestao_acima:
             alternativas_formatadas = [
-                                    {"marca": v.get("marca", ""), "modelo": v.get("modelo", ""), "ano": v.get("ano", ""), "cor": v.get("cor", ""), "preco":  "preco": v.get("preco", "")}
+                                    {"marca": v.get("marca", ""), "modelo": v.get("modelo", ""), "ano": v.get("ano", ""), "cor": v.get("cor", ""), "preco": v.get("preco", "")}
                 for v in sugestao_acima
             ]
             return JSONResponse(content={
