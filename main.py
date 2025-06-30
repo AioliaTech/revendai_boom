@@ -223,7 +223,7 @@ def agendar_tarefas():
     scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
     scheduler.add_job(fetch_and_convert_xml, "cron", hour="0,12")
     scheduler.start()
-    fetch_and_convert_xml()
+    fetch_and_convert_json()
 
 @app.get("/api/data")
 def get_data(request: Request):
