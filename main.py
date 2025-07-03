@@ -221,7 +221,7 @@ def sugerir_mais_proximo_acima(vehicles, valormax, limite=5):
 @app.on_event("startup")
 def agendar_tarefas():
     scheduler = BackgroundScheduler(timezone="America/Sao_Paulo")
-    scheduler.add_job(fetch_and_convert_json, "cron", hour="0,12")
+    scheduler.add_job(fetch_and_convert_xml, "cron", hour="0,12")
     scheduler.start()
     fetch_and_convert_json()
 
