@@ -242,6 +242,7 @@ def get_data(request: Request):
         return JSONResponse(content={"error": "Formato de dados inválido (chave 'veiculos' não encontrada)", "resultados": [], "total_encontrado": 0}, status_code=500)
     query_params = dict(request.query_params)
     valormax = query_params.pop("ValorMax", None)
+    simples = query_params.pop("simples", None)
     filtros_originais = {
         "id": query_params.get("id"),
         "tipo": query_params.get("tipo"),
@@ -258,6 +259,14 @@ def get_data(request: Request):
     }
     filtros_ativos = {k: v for k, v in filtros_originais.items() if v}
     resultado = filtrar_veiculos(vehicles, filtros_ativos, valormax)
+
+    # PROCESSA FOTOS SE SIMPLES=1
+    if simples == "1":
+        for v in resultado:
+            fotos = v.get("fotos")
+            if isinstance(fotos, list):
+                v["fotos"] = fotos[:1] if fotos else []
+    
     if resultado:
         return JSONResponse(content={
             "resultados": resultado,
