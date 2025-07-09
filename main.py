@@ -262,11 +262,10 @@ def get_data(request: Request):
 
     # PROCESSA FOTOS SE SIMPLES=1
     if simples == "1":
-        for v in resultado:
-            fotos = v.get("fotos")
-            if isinstance(fotos, list):
-                v["fotos"] = fotos[:1] if fotos else []
-        # Remove 'opcionais'
+    for v in resultado:
+        fotos = v.get("fotos")
+        if isinstance(fotos, list):
+            v["fotos"] = fotos[:1] if fotos else []
         v.pop("opcionais", None)
     
     if resultado:
