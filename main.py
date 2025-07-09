@@ -266,6 +266,8 @@ def get_data(request: Request):
             fotos = v.get("fotos")
             if isinstance(fotos, list):
                 v["fotos"] = fotos[:1] if fotos else []
+        # Remove 'opcionais'
+        v.pop("opcionais", None)
     
     if resultado:
         return JSONResponse(content={
