@@ -1,8 +1,8 @@
-import requests, json, os, re
+import requests, json, os
 from datetime import datetime
 from unidecode import unidecode
 
-JSON_OUTPUT_FILE = "data.json"
+JSON_FILE = "data.json"
 
 MAPEAMENTO_CILINDRADAS = {
     "g 310": 300, "f 750 gs": 850, "f 850 gs": 850, "f 900": 900, "r 1250": 1250,
@@ -43,18 +43,8 @@ def normalizar_modelo(modelo):
     if not modelo:
         return ""
     modelo_norm = unidecode(modelo).lower()
-    modelo_norm = re.sub(r'[^a-z0-9]', '', modelo_norm)
+    modelo_norm = modelo_norm.replace(" ", "").replace("-", "").replace("_", "")
     return modelo_norm
-
-def inferir_categoria(modelo):
-    if not modelo:
-        return None
-    modelo_norm = normalizar_modelo(modelo)
-    for mapeado, categoria in MAPEAMENTO_CATEGORIAS.items():
-        mapeado_norm = normalizar_modelo(mapeado)
-        if mapeado_norm in modelo_norm:
-            return categoria
-    return None
 
 def inferir_cilindrada(modelo):
     if not modelo:
@@ -66,53 +56,43 @@ def inferir_cilindrada(modelo):
             return cilindrada
     return None
 
-def converter_preco_json(valor):
-    if not valor:
-        return None
-    try:
-        return float(valor)
-    except (ValueError, TypeError):
-        return None
 
-def extrair_fotos(v):
-    # Para JSON, fotos já vem como lista
-    fotos = v.get("fotos", [])
-    if isinstance(fotos, list):
-        return fotos
-    elif isinstance(fotos, str):
-        return [fotos]
-    return []
 
-# =================== FETCHER JSON =======================
+# =================== FETCHER MULTI-XML =======================
 
-def get_json_urls():
+def get_xml_urls():
     urls = []
     for var, val in os.environ.items():
-        if var.startswith("JSON_URL") and val:
+        if var.startswith("XML_URL") and val:
             urls.append(val)
-    if "JSON_URL" in os.environ and os.environ["JSON_URL"] not in urls:
-        urls.append(os.environ["JSON_URL"])
+    if "XML_URL" in os.environ and os.environ["XML_URL"] not in urls:
+        urls.append(os.environ["XML_URL"])
     return urls
 
-def fetch_and_convert_json():
+def fetch_and_convert_xml():
     try:
-        JSON_URLS = get_json_urls()
+        JSON_URLS = get_xml_urls()
         if not JSON_URLS:
-            raise ValueError("Nenhuma variável JSON_URL definida")
+            raise ValueError("Nenhuma variável XML_URL definida")
 
         parsed_vehicles = []
 
         for JSON_URL in JSON_URLS:
+            print(f"[INFO] Processando URL: {JSON_URL}")
             response = requests.get(JSON_URL)
+            response.raise_for_status()
+            
             data_dict = response.json()
             
-            # O JSON já tem a estrutura com "veiculos"
+            # Suporta diferentes formatos (veiculos já em JSON)
             veiculos = data_dict.get("veiculos", [])
             
             # Garante que seja lista
             if isinstance(veiculos, dict):
                 veiculos = [veiculos]
-                
+            
+            print(f"[INFO] Encontrados {len(veiculos)} veículos")
+            
             for v in veiculos:
                 try:
                     parsed = {
@@ -121,8 +101,8 @@ def fetch_and_convert_json():
                         "versao": v.get("versao"),
                         "marca": v.get("marca"),
                         "modelo": v.get("modelo"),
-                        "ano": v.get("anoModelo"),
-                        "ano_fabricacao": v.get("anoFabricacao"),
+                        "ano": v.get("anoModelo") or v.get("ano"),
+                        "ano_fabricacao": v.get("anoFabricacao") or v.get("ano_fabricacao"),
                         "km": v.get("km"),
                         "cor": v.get("cor"),
                         "combustivel": v.get("combustivel"),
@@ -131,25 +111,31 @@ def fetch_and_convert_json():
                         "portas": v.get("portas"),
                         "categoria": v.get("categoria"),
                         "cilindrada": v.get("cilindrada") or inferir_cilindrada(v.get("modelo")),
-                        "preco": converter_preco_json(v.get("valorVenda")),
+                        "preco": v.get("valorVenda") or v.get("preco") or 0,
                         "opcionais": v.get("opcionais"),
-                        "fotos": extrair_fotos(v)
+                        "fotos": v.get("fotos") or []
                     }
                     parsed_vehicles.append(parsed)
+                    
                 except Exception as e:
-                    print(f"[ERRO ao converter veículo ID {v.get('id')}] {e}")
+                    print(f"[ERRO ao converter veículo ID {v.get('id', 'N/A')}] {e}")
+                    continue
 
         data_dict = {
             "veiculos": parsed_vehicles,
             "_updated_at": datetime.now().isoformat()
         }
 
-        with open(JSON_OUTPUT_FILE, "w", encoding="utf-8") as f:
+        with open(JSON_FILE, "w", encoding="utf-8") as f:
             json.dump(data_dict, f, ensure_ascii=False, indent=2)
 
-        print("[OK] Dados atualizados com sucesso.")
+        print(f"[OK] Dados atualizados com sucesso. Total de veículos: {len(parsed_vehicles)}")
         return data_dict
 
     except Exception as e:
         print(f"[ERRO] Falha ao converter JSON: {e}")
         return {}
+
+if __name__ == "__main__":
+    result = fetch_and_convert_xml()
+    print(f"Processamento concluído. {len(result.get('veiculos', []))} veículos processados.")
