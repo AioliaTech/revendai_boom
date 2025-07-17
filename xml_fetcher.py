@@ -112,7 +112,7 @@ def fetch_and_convert_xml():
                         "categoria": v.get("categoria"),
                         "cilindrada": v.get("cilindrada") or inferir_cilindrada(v.get("modelo")),
                         "preco": v.get("valorVenda") or v.get("preco") or 0,
-                        "opcionais": v.get("opcionais"),
+                        "opcionais": ", ".join(v.get("opcionais", [])) if isinstance(v.get("opcionais"), list) else v.get("opcionais"),
                         "fotos": v.get("fotos") or []
                     }
                     parsed_vehicles.append(parsed)
