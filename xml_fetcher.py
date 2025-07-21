@@ -82,6 +82,14 @@ def fetch_and_convert_xml():
             
             data_dict = response.json()
             
+            print(f"[DEBUG] Tipo de data_dict: {type(data_dict)}")
+            if isinstance(data_dict, list):
+                print(f"[DEBUG] É lista com {len(data_dict)} itens")
+                if len(data_dict) > 0:
+                    print(f"[DEBUG] Primeiro item: {type(data_dict[0])}")
+            else:
+                print(f"[DEBUG] É dict com chaves: {list(data_dict.keys()) if isinstance(data_dict, dict) else 'N/A'}")
+            
             # Verifica se é uma lista direta ou se tem wrapper
             if isinstance(data_dict, list):
                 veiculos = data_dict  # JSON começa direto com lista
@@ -96,6 +104,11 @@ def fetch_and_convert_xml():
             
             for v in veiculos:
                 try:
+                    # Verifica se v é um dicionário
+                    if not isinstance(v, dict):
+                        print(f"[AVISO] Item não é dicionário: {type(v)} - {v}")
+                        continue
+                        
                     parsed = {
                         "id": v.get("id"),
                         "tipo": v.get("tipo"),
