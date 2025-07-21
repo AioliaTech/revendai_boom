@@ -77,63 +77,68 @@ def fetch_and_convert_xml():
 
         for JSON_URL in JSON_URLS:
             print(f"[INFO] Processando URL: {JSON_URL}")
-            response = requests.get(JSON_URL)
-            response.raise_for_status()
-            
-            data_dict = response.json()
-            
-            print(f"[DEBUG] Tipo de data_dict: {type(data_dict)}")
-            if isinstance(data_dict, list):
-                print(f"[DEBUG] É lista com {len(data_dict)} itens")
-                if len(data_dict) > 0:
-                    print(f"[DEBUG] Primeiro item: {type(data_dict[0])}")
-            else:
-                print(f"[DEBUG] É dict com chaves: {list(data_dict.keys()) if isinstance(data_dict, dict) else 'N/A'}")
-            
-            # Verifica se é uma lista direta ou se tem wrapper
-            if isinstance(data_dict, list):
-                veiculos = data_dict  # JSON começa direto com lista
-            else:
-                veiculos = data_dict.get("veiculos", [])  # JSON tem wrapper
-            
-            # Garante que seja lista
-            if isinstance(veiculos, dict):
-                veiculos = [veiculos]
-            
-            print(f"[INFO] Encontrados {len(veiculos)} veículos")
-            
-            for v in veiculos:
-                try:
-                    # Verifica se v é um dicionário
-                    if not isinstance(v, dict):
-                        print(f"[AVISO] Item não é dicionário: {type(v)} - {v}")
+            try:
+                response = requests.get(JSON_URL)
+                response.raise_for_status()
+                
+                data_dict = response.json()
+                
+                print(f"[DEBUG] Tipo de data_dict: {type(data_dict)}")
+                if isinstance(data_dict, list):
+                    print(f"[DEBUG] É lista com {len(data_dict)} itens")
+                    if len(data_dict) > 0:
+                        print(f"[DEBUG] Primeiro item: {type(data_dict[0])}")
+                else:
+                    print(f"[DEBUG] É dict com chaves: {list(data_dict.keys()) if isinstance(data_dict, dict) else 'N/A'}")
+                
+                # Verifica se é uma lista direta ou se tem wrapper
+                if isinstance(data_dict, list):
+                    veiculos = data_dict  # JSON começa direto com lista
+                else:
+                    veiculos = data_dict.get("veiculos", [])  # JSON tem wrapper
+                
+                # Garante que seja lista
+                if isinstance(veiculos, dict):
+                    veiculos = [veiculos]
+                
+                print(f"[INFO] Encontrados {len(veiculos)} veículos")
+                
+                for v in veiculos:
+                    try:
+                        # Verifica se v é um dicionário
+                        if not isinstance(v, dict):
+                            print(f"[AVISO] Item não é dicionário: {type(v)} - {v}")
+                            continue
+                            
+                        parsed = {
+                            "id": v.get("id"),
+                            "tipo": v.get("tipo"),
+                            "versao": v.get("versao"),
+                            "marca": v.get("marca"),
+                            "modelo": v.get("modelo"),
+                            "ano": v.get("ano_mod") or v.get("anoModelo") or v.get("ano"),
+                            "ano_fabricacao": v.get("ano_fab") or v.get("anoFabricacao") or v.get("ano_fabricacao"),
+                            "km": v.get("km"),
+                            "cor": v.get("cor"),
+                            "combustivel": v.get("combustivel"),
+                            "cambio": v.get("cambio"),
+                            "motor": v.get("motor"),
+                            "portas": v.get("portas"),
+                            "categoria": v.get("categoria"),
+                            "cilindrada": v.get("cilindrada") or inferir_cilindrada(v.get("modelo")),
+                            "preco": float(v.get("valor", 0)) if v.get("valor") else (v.get("valorVenda") or v.get("preco") or 0),
+                            "opcionais": ", ".join(v.get("opcionais", [])) if isinstance(v.get("opcionais"), list) else v.get("opcionais"),
+                            "fotos": v.get("galeria") or v.get("fotos") or []
+                        }
+                        parsed_vehicles.append(parsed)
+                        
+                    except Exception as e:
+                        print(f"[ERRO ao converter veículo ID {v.get('id', 'N/A') if isinstance(v, dict) else 'N/A'}] {e}")
                         continue
                         
-                    parsed = {
-                        "id": v.get("id"),
-                        "tipo": v.get("tipo"),
-                        "versao": v.get("versao"),
-                        "marca": v.get("marca"),
-                        "modelo": v.get("modelo"),
-                        "ano": v.get("ano_mod") or v.get("anoModelo") or v.get("ano"),
-                        "ano_fabricacao": v.get("ano_fab") or v.get("anoFabricacao") or v.get("ano_fabricacao"),
-                        "km": v.get("km"),
-                        "cor": v.get("cor"),
-                        "combustivel": v.get("combustivel"),
-                        "cambio": v.get("cambio"),
-                        "motor": v.get("motor"),
-                        "portas": v.get("portas"),
-                        "categoria": v.get("categoria"),
-                        "cilindrada": v.get("cilindrada") or inferir_cilindrada(v.get("modelo")),
-                        "preco": float(v.get("valor", 0)) if v.get("valor") else (v.get("valorVenda") or v.get("preco") or 0),
-                        "opcionais": ", ".join(v.get("opcionais", [])) if isinstance(v.get("opcionais"), list) else v.get("opcionais"),
-                        "fotos": v.get("galeria") or v.get("fotos") or []
-                    }
-                    parsed_vehicles.append(parsed)
-                    
-                except Exception as e:
-                    print(f"[ERRO ao converter veículo ID {v.get('id', 'N/A')}] {e}")
-                    continue
+            except Exception as url_error:
+                print(f"[ERRO na URL {JSON_URL}] {url_error}")
+                continue
 
         data_dict = {
             "veiculos": parsed_vehicles,
