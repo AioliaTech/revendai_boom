@@ -85,7 +85,7 @@ def fetch_and_convert_xml():
             data_dict = response.json()
             
             # Suporta diferentes formatos (veiculos já em JSON)
-            veiculos = data_dict.get("veiculos", [])
+            veiculos = data_dict
             
             # Garante que seja lista
             if isinstance(veiculos, dict):
