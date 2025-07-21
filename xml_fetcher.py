@@ -56,9 +56,7 @@ def inferir_cilindrada(modelo):
             return cilindrada
     return None
 
-
-
-# =================== FETCHER MULTI-XML =======================
+# =================== FETCHER MULTI-JSON =======================
 
 def get_xml_urls():
     urls = []
@@ -84,8 +82,11 @@ def fetch_and_convert_xml():
             
             data_dict = response.json()
             
-            # Suporta diferentes formatos (veiculos já em JSON)
-            veiculos = data_dict
+            # Verifica se é uma lista direta ou se tem wrapper
+            if isinstance(data_dict, list):
+                veiculos = data_dict  # JSON começa direto com lista
+            else:
+                veiculos = data_dict.get("veiculos", [])  # JSON tem wrapper
             
             # Garante que seja lista
             if isinstance(veiculos, dict):
@@ -101,8 +102,8 @@ def fetch_and_convert_xml():
                         "versao": v.get("versao"),
                         "marca": v.get("marca"),
                         "modelo": v.get("modelo"),
-                        "ano": v.get("anoModelo") or v.get("ano"),
-                        "ano_fabricacao": v.get("anoFabricacao") or v.get("ano_fabricacao"),
+                        "ano": v.get("ano_mod") or v.get("anoModelo") or v.get("ano"),
+                        "ano_fabricacao": v.get("ano_fab") or v.get("anoFabricacao") or v.get("ano_fabricacao"),
                         "km": v.get("km"),
                         "cor": v.get("cor"),
                         "combustivel": v.get("combustivel"),
@@ -111,9 +112,9 @@ def fetch_and_convert_xml():
                         "portas": v.get("portas"),
                         "categoria": v.get("categoria"),
                         "cilindrada": v.get("cilindrada") or inferir_cilindrada(v.get("modelo")),
-                        "preco": v.get("valorVenda") or v.get("preco") or 0,
+                        "preco": float(v.get("valor", 0)) if v.get("valor") else (v.get("valorVenda") or v.get("preco") or 0),
                         "opcionais": ", ".join(v.get("opcionais", [])) if isinstance(v.get("opcionais"), list) else v.get("opcionais"),
-                        "fotos": v.get("fotos") or []
+                        "fotos": v.get("galeria") or v.get("fotos") or []
                     }
                     parsed_vehicles.append(parsed)
                     
