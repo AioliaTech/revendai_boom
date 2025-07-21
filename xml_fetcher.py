@@ -56,6 +56,50 @@ def inferir_cilindrada(modelo):
             return cilindrada
     return None
 
+def flatten_data(data):
+    """
+    Função para achatar estruturas de dados aninhadas e garantir que sempre tenhamos uma lista de dicionários
+    """
+    if not data:
+        return []
+    
+    # Se é uma lista
+    if isinstance(data, list):
+        result = []
+        for item in data:
+            if isinstance(item, dict):
+                result.append(item)
+            elif isinstance(item, list):
+                # Se o item é uma lista, recursivamente achatar
+                result.extend(flatten_data(item))
+            else:
+                print(f"[AVISO] Item ignorado (tipo não suportado): {type(item)} - {item}")
+        return result
+    
+    # Se é um dicionário
+    elif isinstance(data, dict):
+        return [data]
+    
+    else:
+        print(f"[AVISO] Dados ignorados (tipo não suportado): {type(data)} - {data}")
+        return []
+
+def safe_get_value(item, keys, default=None):
+    """
+    Função segura para extrair valores de dicionários, tentando múltiplas chaves
+    """
+    if not isinstance(item, dict):
+        return default
+    
+    if isinstance(keys, str):
+        keys = [keys]
+    
+    for key in keys:
+        if key in item and item[key] is not None:
+            return item[key]
+    
+    return default
+
 # =================== FETCHER MULTI-JSON =======================
 
 def get_xml_urls():
@@ -78,83 +122,156 @@ def fetch_and_convert_xml():
         for JSON_URL in JSON_URLS:
             print(f"[INFO] Processando URL: {JSON_URL}")
             try:
-                response = requests.get(JSON_URL)
+                response = requests.get(JSON_URL, timeout=30)
                 response.raise_for_status()
                 
-                data_dict = response.json()
+                # Parse do JSON
+                try:
+                    data_dict = response.json()
+                except json.JSONDecodeError as je:
+                    print(f"[ERRO] JSON inválido na URL {JSON_URL}: {je}")
+                    continue
                 
                 print(f"[DEBUG] Tipo de data_dict: {type(data_dict)}")
+                
+                # Extrair lista de veículos de forma mais robusta
+                veiculos = []
+                
                 if isinstance(data_dict, list):
-                    print(f"[DEBUG] É lista com {len(data_dict)} itens")
-                    if len(data_dict) > 0:
-                        print(f"[DEBUG] Primeiro item: {type(data_dict[0])}")
+                    print(f"[DEBUG] JSON é uma lista direta com {len(data_dict)} itens")
+                    veiculos = flatten_data(data_dict)
+                    
+                elif isinstance(data_dict, dict):
+                    print(f"[DEBUG] JSON é um objeto com chaves: {list(data_dict.keys())}")
+                    
+                    # Tentar várias chaves possíveis para encontrar os veículos
+                    possible_keys = ['veiculos', 'vehicles', 'data', 'items', 'results', 'content']
+                    
+                    for key in possible_keys:
+                        if key in data_dict:
+                            print(f"[DEBUG] Encontrou dados na chave '{key}'")
+                            veiculos = flatten_data(data_dict[key])
+                            break
+                    
+                    # Se não encontrou em nenhuma chave conhecida, tratar o próprio dict como veículo
+                    if not veiculos and data_dict:
+                        print(f"[DEBUG] Tratando objeto inteiro como veículo único")
+                        veiculos = [data_dict]
+                
                 else:
-                    print(f"[DEBUG] É dict com chaves: {list(data_dict.keys()) if isinstance(data_dict, dict) else 'N/A'}")
+                    print(f"[AVISO] Tipo de dados não suportado: {type(data_dict)}")
+                    continue
                 
-                # Verifica se é uma lista direta ou se tem wrapper
-                if isinstance(data_dict, list):
-                    veiculos = data_dict  # JSON começa direto com lista
-                else:
-                    veiculos = data_dict.get("veiculos", [])  # JSON tem wrapper
+                print(f"[INFO] Processando {len(veiculos)} veículos encontrados")
                 
-                # Garante que seja lista
-                if isinstance(veiculos, dict):
-                    veiculos = [veiculos]
-                
-                print(f"[INFO] Encontrados {len(veiculos)} veículos")
-                
-                for v in veiculos:
+                # Processar cada veículo
+                for i, v in enumerate(veiculos):
                     try:
-                        # Verifica se v é um dicionário
+                        # Verificação de segurança
                         if not isinstance(v, dict):
-                            print(f"[AVISO] Item não é dicionário: {type(v)} - {v}")
+                            print(f"[AVISO] Veículo {i+1} não é um dicionário: {type(v)}")
                             continue
-                            
+                        
+                        # Extrair dados de forma segura
                         parsed = {
-                            "id": v.get("id"),
-                            "tipo": v.get("tipo"),
-                            "versao": v.get("versao"),
-                            "marca": v.get("marca"),
-                            "modelo": v.get("modelo"),
-                            "ano": v.get("ano_mod") or v.get("anoModelo") or v.get("ano"),
-                            "ano_fabricacao": v.get("ano_fab") or v.get("anoFabricacao") or v.get("ano_fabricacao"),
-                            "km": v.get("km"),
-                            "cor": v.get("cor"),
-                            "combustivel": v.get("combustivel"),
-                            "cambio": v.get("cambio"),
-                            "motor": v.get("motor"),
-                            "portas": v.get("portas"),
-                            "categoria": v.get("categoria"),
-                            "cilindrada": v.get("cilindrada") or inferir_cilindrada(v.get("modelo")),
-                            "preco": float(v.get("valor", 0)) if v.get("valor") else (v.get("valorVenda") or v.get("preco") or 0),
-                            "opcionais": ", ".join(v.get("opcionais", [])) if isinstance(v.get("opcionais"), list) else v.get("opcionais"),
-                            "fotos": v.get("galeria") or v.get("fotos") or []
+                            "id": safe_get_value(v, ["id", "ID", "codigo", "cod"]),
+                            "tipo": safe_get_value(v, ["tipo", "type", "categoria_veiculo"]),
+                            "versao": safe_get_value(v, ["versao", "version", "variant"]),
+                            "marca": safe_get_value(v, ["marca", "brand", "fabricante"]),
+                            "modelo": safe_get_value(v, ["modelo", "model", "nome"]),
+                            "ano": safe_get_value(v, ["ano_mod", "anoModelo", "ano", "year_model", "ano_modelo"]),
+                            "ano_fabricacao": safe_get_value(v, ["ano_fab", "anoFabricacao", "ano_fabricacao", "year_manufacture"]),
+                            "km": safe_get_value(v, ["km", "quilometragem", "mileage", "kilometers"]),
+                            "cor": safe_get_value(v, ["cor", "color", "colour"]),
+                            "combustivel": safe_get_value(v, ["combustivel", "fuel", "fuel_type"]),
+                            "cambio": safe_get_value(v, ["cambio", "transmission", "gear"]),
+                            "motor": safe_get_value(v, ["motor", "engine", "motorization"]),
+                            "portas": safe_get_value(v, ["portas", "doors", "num_doors"]),
+                            "categoria": safe_get_value(v, ["categoria", "category", "class"]),
+                            "cilindrada": safe_get_value(v, ["cilindrada", "displacement", "engine_size"]),
+                            "preco": 0,
+                            "opcionais": "",
+                            "fotos": safe_get_value(v, ["galeria", "fotos", "photos", "images", "gallery"], [])
                         }
+                        
+                        # Inferir cilindrada se não estiver presente
+                        if not parsed["cilindrada"]:
+                            parsed["cilindrada"] = inferir_cilindrada(parsed["modelo"])
+                        
+                        # Tratar preço de forma mais robusta
+                        preco_raw = safe_get_value(v, ["valor", "valorVenda", "preco", "price", "value"])
+                        if preco_raw:
+                            try:
+                                if isinstance(preco_raw, str):
+                                    # Remove caracteres não numéricos exceto ponto e vírgula
+                                    preco_clean = ''.join(c for c in preco_raw if c.isdigit() or c in '.,')
+                                    preco_clean = preco_clean.replace(',', '.')
+                                    parsed["preco"] = float(preco_clean) if preco_clean else 0
+                                else:
+                                    parsed["preco"] = float(preco_raw)
+                            except (ValueError, TypeError):
+                                parsed["preco"] = 0
+                        
+                        # Tratar opcionais
+                        opcionais_raw = safe_get_value(v, ["opcionais", "options", "extras", "features"])
+                        if isinstance(opcionais_raw, list):
+                            parsed["opcionais"] = ", ".join(str(item) for item in opcionais_raw if item)
+                        elif opcionais_raw:
+                            parsed["opcionais"] = str(opcionais_raw)
+                        
+                        # Garantir que fotos seja uma lista
+                        if not isinstance(parsed["fotos"], list):
+                            if parsed["fotos"]:
+                                parsed["fotos"] = [parsed["fotos"]]
+                            else:
+                                parsed["fotos"] = []
+                        
                         parsed_vehicles.append(parsed)
                         
                     except Exception as e:
-                        print(f"[ERRO ao converter veículo ID {v.get('id', 'N/A') if isinstance(v, dict) else 'N/A'}] {e}")
+                        print(f"[ERRO] Erro ao processar veículo {i+1}: {e}")
                         continue
                         
+            except requests.RequestException as req_error:
+                print(f"[ERRO] Erro de requisição para URL {JSON_URL}: {req_error}")
+                continue
             except Exception as url_error:
-                print(f"[ERRO na URL {JSON_URL}] {url_error}")
+                print(f"[ERRO] Erro geral na URL {JSON_URL}: {url_error}")
                 continue
 
+        # Criar resultado final
         data_dict = {
             "veiculos": parsed_vehicles,
-            "_updated_at": datetime.now().isoformat()
+            "_updated_at": datetime.now().isoformat(),
+            "_total_count": len(parsed_vehicles)
         }
 
-        with open(JSON_FILE, "w", encoding="utf-8") as f:
-            json.dump(data_dict, f, ensure_ascii=False, indent=2)
+        # Salvar arquivo
+        try:
+            with open(JSON_FILE, "w", encoding="utf-8") as f:
+                json.dump(data_dict, f, ensure_ascii=False, indent=2)
+            print(f"[OK] Arquivo {JSON_FILE} salvo com sucesso!")
+        except Exception as save_error:
+            print(f"[ERRO] Erro ao salvar arquivo: {save_error}")
 
         print(f"[OK] Dados atualizados com sucesso. Total de veículos: {len(parsed_vehicles)}")
         return data_dict
 
     except Exception as e:
-        print(f"[ERRO] Falha ao converter JSON: {e}")
-        return {}
+        print(f"[ERRO GERAL] Falha ao converter JSON: {e}")
+        # Retornar estrutura vazia em caso de erro
+        return {
+            "veiculos": [],
+            "_updated_at": datetime.now().isoformat(),
+            "_error": str(e)
+        }
 
 if __name__ == "__main__":
     result = fetch_and_convert_xml()
-    print(f"Processamento concluído. {len(result.get('veiculos', []))} veículos processados.")
+    total_vehicles = len(result.get('veiculos', []))
+    print(f"Processamento concluído. {total_vehicles} veículos processados.")
+    
+    if total_vehicles > 0:
+        print("\nPrimeiros 3 veículos processados:")
+        for i, veiculo in enumerate(result['veiculos'][:3]):
+            print(f"{i+1}. {veiculo.get('marca', 'N/A')} {veiculo.get('modelo', 'N/A')} - R$ {veiculo.get('preco', 0)}")
